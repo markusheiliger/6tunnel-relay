@@ -1,0 +1,381 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"adminUsername": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the administrator of the new VM. Exclusion list: 'admin','administrator'"
+			}
+		},
+		"adminPassword": {
+			"type": "securestring",
+			"metadata": {
+				"description": "The password for the administrator account of the new VM"
+			}
+		},
+		"location": {
+			"type": "string",
+			"defaultValue": "[resourceGroup().location]",
+			"metadata": {
+				"description": "Location for all resources."
+			}
+		}
+	},
+	"variables": {
+		"resourcePrefix": "[uniqueString(resourceGroup().id)]",
+		"vnetv4AddressRange": "10.0.0.0/16",
+		"vnetv6AddressRange": "ace:cab:deca::/48",
+		"vnetName": "[variables('resourcePrefix')]",
+		"subnetv4AddressRange": "10.0.0.0/24",
+		"subnetv6AddressRange": "ace:cab:deca:deed::/64",
+		"snetName": "[variables('resourcePrefix')]",
+		"subnet-id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('snetName'))]",
+		"vmName": "[variables('resourcePrefix')]",
+		"vmSize": "Standard_B1ls",
+		"vmPipName": "[concat(variables('resourcePrefix'), '-vm')]",
+		"lbName": "[variables('resourcePrefix')]",
+		"lbPipNameV4": "[concat(variables('resourcePrefix'), '-lb-v4')]",
+		"lbPipNameV6": "[concat(variables('resourcePrefix'), '-lb-v6')]",
+		"imagePublisher": "Canonical",
+		"imageOffer": "UbuntuServer",
+		"imageSku": "18_04-lts-gen2",
+		"nsgName": "[variables('resourcePrefix')]",
+		"rtName": "[variables('resourcePrefix')]"
+	},
+	"resources": [
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/publicIPAddresses",
+			"name": "[variables('vmPipName')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"publicIPAllocationMethod": "Dynamic"
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/publicIPAddresses",
+			"name": "[variables('lbPipNameV4')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"publicIPAllocationMethod": "Dynamic"
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/publicIPAddresses",
+			"name": "[variables('lbPipNameV6')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"publicIPAllocationMethod": "Dynamic",
+				"publicIPAddressVersion": "IPv6"
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"name": "[variables('lbName')]",
+			"type": "Microsoft.Network/loadBalancers",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/publicIPAddresses', variables('lbPipNameV4'))]",
+				"[resourceId('Microsoft.Network/publicIPAddresses', variables('lbPipNameV6'))]"
+			],
+			"properties": {
+				"frontendIpConfigurations": [
+					{
+						"name": "LBFE-V4",
+						"properties": {
+							"publicIPAddress": {
+								"id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('lbPipNameV4'))]"
+							}
+						}
+					},
+					{
+						"name": "LBFE-V6",
+						"properties": {
+							"publicIPAddress": {
+								"id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('lbPipNameV6'))]"
+							}
+						}
+					}
+				],
+				"backendAddressPools": [
+					{
+						"name": "LBBAP-V4"
+					},
+					{
+						"name": "LBBAP-V6"
+					}
+				],
+				"loadBalancingRules": [
+					{
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', variables('lbName'), 'LBFE-V4')]"
+							},
+							"backendAddressPool": {
+								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V4')]"
+							},
+							"protocol": "Tcp",
+							"frontendPort": 80,
+							"backendPort": 80,
+							"idleTimeoutInMinutes": 15
+						},
+						"name": "lbrule-v4"
+					},
+					{
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', variables('lbName'), 'LBFE-V6')]"
+							},
+							"backendAddressPool": {
+								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-v6')]"
+							},
+							"protocol": "Tcp",
+							"frontendPort": 80,
+							"backendPort": 80
+						},
+						"name": "lbrule-v6"
+					}
+				]
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/virtualNetworks",
+			"name": "[variables('vnetName')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"addressSpace": {
+					"addressPrefixes": [
+						"[variables('vnetv4AddressRange')]",
+						"[variables('vnetv6AddressRange')]"
+					]
+				},
+				"subnets": [
+					{
+						"name": "[variables('snetName')]",
+						"properties": {
+							"addressPrefixes": [
+								"[variables('subnetv4AddressRange')]",
+								"[variables('subnetv6AddressRange')]"
+							]
+						}
+					}
+				]
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "[variables('nsgName')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"securityRules": [
+					{
+						"name": "allow-SSH-in",
+						"properties": {
+							"description": "Allow SSH",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "22",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 1000,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "allow-Synology-HTTP-in",
+						"properties": {
+							"description": "Allow Synology HTTP",
+							"protocol": "TCP",
+							"sourcePortRange": "*",
+							"destinationPortRange": "5000",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 1001,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "allow-Synology-HTTPS-in",
+						"properties": {
+							"description": "Allow Synology HTTPS",
+							"protocol": "TCP",
+							"sourcePortRange": "*",
+							"destinationPortRange": "5001",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 1002,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "allow-all-out",
+						"properties": {
+							"description": "Allow out All",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 1002,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "allow-MyIpv6App-out",
+						"properties": {
+							"description": "Allow My IPv6 App",
+							"protocol": "Tcp",
+							"sourcePortRange": "33819-33829",
+							"destinationPortRange": "5000-6000",
+							"sourceAddressPrefix": "ace:cab:deca:deed::/64",
+							"destinationAddressPrefixes": [ "cab:cab:aaaa:bbbb::/64", "cab:cab:1111:2222::/64" ],
+							"access": "Allow",
+							"priority": 1004,
+							"direction": "Outbound"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/routeTables",
+			"name": "[variables('rtName')]",
+			"apiVersion": "2020-05-01",
+			"location": "[parameters('location')]",
+			"properties": {
+				"routes": [
+					{
+						"name": "v6route",
+						"properties": {
+							"addressPrefix": "cab:cab::/96",
+							"nextHopType": "VirtualAppliance",
+							"nextHopIpAddress": "ace:cab:deca:f00d::1"
+						}
+					}
+				]
+			}
+		},
+		{
+			"apiVersion": "2020-05-01",
+			"type": "Microsoft.Network/networkInterfaces",
+			"name": "[variables('vmName')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]",
+				"[resourceId('Microsoft.Network/loadBalancers', variables('lbName'))]"
+			],
+			"properties": {
+				"networkSecurityGroup": {
+					"id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+				},
+				"ipConfigurations": [
+					{
+						"name": "ipconfig-v4",
+						"properties": {
+							"privateIPAllocationMethod": "Dynamic",
+							"privateIPAddressVersion": "IPv4",
+							"primary": true,
+							"publicIPAddress": {
+								"id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('vmPipName'))]"
+							},
+							"subnet": {
+								"id": "[variables('subnet-id')]"
+							},
+							"loadBalancerBackendAddressPools": [
+								{
+									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V4')]"
+								}
+							]
+						}
+					},
+					{
+						"name": "ipconfig-v6",
+						"properties": {
+							"privateIPAllocationMethod": "Dynamic",
+							"privateIPAddressVersion": "IPv6",
+							"subnet": {
+								"id": "[variables('subnet-id')]"
+							},
+							"loadBalancerBackendAddressPools": [
+								{
+									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V6')]"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		{
+			"apiVersion": "2020-06-01",
+			"type": "Microsoft.Compute/virtualMachines",
+			"name": "[variables('vmName')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkInterfaces', variables('vmName'))]"
+			],
+			"properties": {
+				"hardwareProfile": {
+					"vmSize": "[variables('vmSize')]"
+				},
+				"osProfile": {
+					"computerName": "[variables('vmName')]",
+					"adminUsername": "[parameters('adminUserName')]",
+					"adminPassword": "[parameters('adminPassword')]"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "[variables('imagePublisher')]",
+						"offer": "[variables('imageOffer')]",
+						"sku": "[variables('imageSku')]",
+						"version": "latest"
+					},
+					"osDisk": {
+						"createOption": "FromImage"
+					}
+				},
+				"networkProfile": {
+					"networkInterfaces": [
+						{
+							"id": "[resourceId('Microsoft.Network/networkInterfaces', variables('vmName'))]"
+						}
+					]
+				}
+			},
+			"resources": [
+				{
+					"name": "initialize",
+					"type": "extensions",
+					"location": "[resourceGroup().location]",
+					"apiVersion": "2019-03-01",
+					"dependsOn": [
+						"[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+					],
+					"properties": {
+						"publisher": "Microsoft.Azure.Extensions",
+						"type": "CustomScript",
+						"typeHandlerVersion": "2.1",
+						"autoUpgradeMinorVersion": true,
+
+						"settings": {
+						},
+						"protectedSettings": {
+							"commandToExecute": "sh hello.sh <param2>",
+							"fileUris": []
+						}
+					}
+				}
+			]
+		}
+	]
+}
