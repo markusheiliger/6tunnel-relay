@@ -102,10 +102,10 @@
 				],
 				"backendAddressPools": [
 					{
-						"name": "LBBAP-V4"
+						"name": "LBBEP-V4"
 					},
 					{
-						"name": "LBBAP-V6"
+						"name": "LBBEP-V6"
 					}
 				],
 				"loadBalancingRules": [
@@ -115,12 +115,11 @@
 								"id": "[resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', variables('lbName'), 'LBFE-V4')]"
 							},
 							"backendAddressPool": {
-								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V4')]"
+								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBEP-V4')]"
 							},
 							"protocol": "Tcp",
-							"frontendPort": 80,
-							"backendPort": 80,
-							"idleTimeoutInMinutes": 15
+							"frontendPort": 5000,
+							"backendPort": 5000
 						},
 						"name": "lbrule-v4"
 					},
@@ -130,11 +129,11 @@
 								"id": "[resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', variables('lbName'), 'LBFE-V6')]"
 							},
 							"backendAddressPool": {
-								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-v6')]"
+								"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBEP-v6')]"
 							},
 							"protocol": "Tcp",
-							"frontendPort": 80,
-							"backendPort": 80
+							"frontendPort": 5001,
+							"backendPort": 5001
 						},
 						"name": "lbrule-v6"
 					}
@@ -293,7 +292,7 @@
 							},
 							"loadBalancerBackendAddressPools": [
 								{
-									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V4')]"
+									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBEP-V4')]"
 								}
 							]
 						}
@@ -308,7 +307,7 @@
 							},
 							"loadBalancerBackendAddressPools": [
 								{
-									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBAP-V6')]"
+									"id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'LBBEP-V6')]"
 								}
 							]
 						}
