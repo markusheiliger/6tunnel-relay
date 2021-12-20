@@ -370,7 +370,7 @@
 						"settings": {
 						},
 						"protectedSettings": {
-							"commandToExecute": "sh hello.sh <param2>",
+							"commandToExecute": "apt update && apt upgrade -y",
 							"fileUris": []
 						}
 					}
