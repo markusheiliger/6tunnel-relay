@@ -25,7 +25,9 @@ if [ "$(az group exists --subscription $SUBSCRIPTION -g $RESOURCEGROUP)" == "fal
 	az group create \
 		--subscription $SUBSCRIPTION \
 		-n $RESOURCEGROUP \
-		-l westeurope
+		-l westeurope \
+		--only-show-errors \
+		-o none && echo "... done"
 
 elif [ "$RESET" == "true" ]; then
 
@@ -37,7 +39,7 @@ elif [ "$RESET" == "true" ]; then
 		--mode Complete \
 		--template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/100-blank-template/azuredeploy.json \
 		--only-show-errors \
-		-o none
+		-o none && echo "... done"
 
 fi
 
