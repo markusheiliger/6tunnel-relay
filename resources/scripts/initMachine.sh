@@ -15,4 +15,5 @@ export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -y && sudo apt-get upgrade -y 
 
 # install commonly used packages
-sudo apt-get install -y apt-utils apt-transport-https coreutils net-tools
+sudo apt-get install -y apt-utils apt-transport-https coreutils
+
