@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install required packages
-sudo apt-get install 6tunnel net-tools
+sudo apt-get install -y 6tunnel net-tools 
 
 # patch DHCP client configuration
 cat << EOF | sudo tee -a /etc/dhcp/dhclient.conf
