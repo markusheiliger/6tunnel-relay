@@ -12,9 +12,12 @@ export DEBIAN_FRONTEND=noninteractive
 	&& sed -i 's/#$nrconf{restart}.*/$nrconf{restart} = '"'"'l'"'"';/g' /etc/needrestart/needrestart.conf
 
 # register Microsoft package feed (https://learn.microsoft.com/en-us/linux/packages)
-curl -sSL https://packages.microsoft.com/config/$(lsb_release -si)/$(lsb_release -sr)/prod.list | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
-curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
-sudo dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+sudo apt-add-repository https://packages.microsoft.com/$(lsb_release -si | tr '[:upper:]' '[:lower:]')/$(lsb_release -sr)/prod
+
+# curl -sSL https://packages.microsoft.com/config/$(lsb_release -si | tr '[:upper:]' '[:lower:]')/$(lsb_release -sr)/prod.list | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
+# curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+# sudo dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 
 # update and upgrade packages
 sudo apt update -y && sudo apt upgrade -y 
