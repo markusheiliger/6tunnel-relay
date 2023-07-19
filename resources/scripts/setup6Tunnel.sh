@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install required packages
-sudo apt-get install -y 6tunnel 
+sudo apt install -y 6tunnel 
 
 # patch DHCP client configuration
 cat << EOF | sudo tee -a /etc/dhcp/dhclient.conf
