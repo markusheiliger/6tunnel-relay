@@ -15,13 +15,13 @@ var SNetV4AddressRange = '10.0.0.0/24'
 var VNetV6AddressRange = 'ace:cab:deca::/48'
 var SNetV6AddressRange = 'ace:cab:deca:deed::/64'
 
-var Setup6TunnelArguments = ''
+var SetupSocatArguments = ''
 
 var InitScriptBaseUri = 'https://raw.githubusercontent.com/markusheiliger/6tunnel-relay/main/resources/scripts/'
-var InitScriptNames = [ 'initMachine.sh', 'setup6Tunnel.sh' ]
+var InitScriptNames = [ 'initMachine.sh', 'setupSocat.sh' ]
 var InitCommand = join(filter([
   './initMachine.sh '
-  './setup6Tunnel.sh ${Setup6TunnelArguments}'
+  './setupSocat.sh ${SetupSocatArguments}'
   'sudo shutdown -r 1'
 ], item => !empty(item)), ' && ')
 
@@ -88,7 +88,7 @@ resource relayNSG 'Microsoft.Network/networkSecurityGroups@2023-02-01' = {
   properties: {
     securityRules: [
       {
-        name: 'allow-SSH-in'
+        name: 'AllowSSHInbound'
         properties: {
           access: 'Allow'
           direction: 'Inbound'
@@ -100,7 +100,45 @@ resource relayNSG 'Microsoft.Network/networkSecurityGroups@2023-02-01' = {
           destinationPortRange: '22'
         }
       }
-    ]
+      {
+        name: 'AllowHTTPInbound'
+        properties: {
+          access: 'Allow'
+          direction: 'Inbound'
+          priority: 1010
+          protocol: 'Tcp'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '80'
+        }
+      }
+      {
+        name: 'AllowHTTPSInbound'
+        properties: {
+          access: 'Allow'
+          direction: 'Inbound'
+          priority: 1020
+          protocol: 'Tcp'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '443'
+        }
+      }
+      {
+        name: 'AllowIPSecInbound'
+        properties: {
+          access: 'Allow'
+          direction: 'Inbound'
+          priority: 1030
+          protocol: 'Udp'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '500,4500'
+        }
+      }    ]
   }
 }
 
